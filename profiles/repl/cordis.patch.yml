@@ -25,29 +25,34 @@
         command: backlog
         args: ['mcp', 'start']
 
+    # context7 and serena are wrapped in `bash -c '... 2>>log'` because the MCP
+    # SDK's StdioClientTransport defaults child stderr to `inherit` and
+    # dsh-mcp-client's config schema has no field to override it — this is
+    # the only way to stop their startup/shutdown INFO logs from spamming the
+    # REPL without patching node_modules. Logs land in ~/.dsh/logs/ for
+    # debugging instead of being discarded outright.
     - id: mcp-context7
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: context7
         transport: stdio
-        command: npx
-        args: ['-y', '@upstash/context7-mcp']
+        command: bash
+        args:
+          [
+            '-c',
+            'mkdir -p "$HOME/.dsh/logs" && exec npx -y @upstash/context7-mcp 2>>"$HOME/.dsh/logs/mcp-context7.log"',
+          ]
 
     - id: mcp-serena
       name: '@deepseek-ai/dsh-mcp-client'
       config:
         serverName: serena
         transport: stdio
-        command: uvx
+        command: bash
         args:
           [
-            '--from',
-            'git+https://github.com/oraios/serena',
-            'serena',
-            'start-mcp-server',
-            '--context',
-            'ide',
-            '--project-from-cwd',
+            '-c',
+            'mkdir -p "$HOME/.dsh/logs" && exec uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide --project-from-cwd 2>>"$HOME/.dsh/logs/mcp-serena.log"',
           ]
 
     - id: mcp-tinyfish
@@ -58,3 +63,4 @@
         url: https://agent.tinyfish.ai/mcp
         headers:
           X-API-Key: !!js process.env.TINYFISH_API_KEY
+
