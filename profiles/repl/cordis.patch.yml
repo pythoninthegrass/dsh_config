@@ -50,3 +50,11 @@
             '--project-from-cwd',
           ]
 
+    - id: mcp-tinyfish
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: tinyfish
+        transport: streamable-http
+        url: https://agent.tinyfish.ai/mcp
+        headers:
+          X-API-Key: !!js process.env.TINYFISH_API_KEY

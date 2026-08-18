@@ -17,8 +17,9 @@ this repo; nothing dsh reads lives only under `~/.dsh`.
 - `.mcp.json` — source-of-truth MCP server manifest (Claude-Code-style), mirrored by hand into
   each profile's `cordis.patch.yml` (see below). dsh has no native `.mcp.json` reader.
 - `.env` (gitignored) / `.env.example` — secrets/vars for the `# dsh` block in
-  `~/git/bashrc/.bash_aliases`. No servers here need secrets yet, so nothing is templated
-  (`*.tpl` + `envsubst`) — add that only when one does, matching `pi_config`'s pattern.
+  `~/git/bashrc/.bash_aliases`. `TINYFISH_API_KEY` is the first one a server needs; still
+  nothing is templated (`*.tpl` + `envsubst`) — add that if managing these by hand gets painful,
+  matching `pi_config`'s pattern.
 - `backlog/`, `AGENTS.md`, `.claude/` — this repo is itself a Backlog.md project, used as the MCP
   test target (see below).
 
