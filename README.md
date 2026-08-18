@@ -72,6 +72,23 @@ The symlink is host-specific and gitignored — recreate it after cloning onto a
 ln -s "$DSH_HOME/profiles/node_modules" plugins/dsh-repl-runner/node_modules
 ```
 
+## Running a profile
+
+The `dsh` alias in `~/git/bashrc/.bash_aliases` (`cd ~/git/dsh_config && command dsh "$@"`) covers
+the `repl` profile by default:
+
+```bash
+dsh
+```
+
+The `web` profile isn't wired into that alias's default and must be started manually, with its
+local API key exported first:
+
+```bash
+export LOCAL_API_KEY=lemonade
+dsh web
+```
+
 ## Profiles & MCP
 
 Each profile's `cordis.patch.yml` mounts one `@deepseek-ai/dsh-mcp-client` plugin instance per MCP
