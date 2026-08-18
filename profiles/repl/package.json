@@ -1,0 +1,14 @@
+{
+  "name": "dsh-profile-repl",
+  "private": true,
+  "dependencies": {
+    "dsh-repl-runner": "workspace:*"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base"
+      ]
+    }
+  }
+}

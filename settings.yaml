@@ -1,0 +1,27 @@
+ui-onboarding:
+  welcomeNoticeVersion: 2026-08-13.1
+llm-pi-ai:
+  providers:
+    local:
+      displayName: Local
+      apiKeyEnv: LOCAL_API_KEY
+      api: openai-completions
+      baseURL: http://127.0.0.1:13305/api/v1
+      models:
+        - id: Qwen3.8-27B-UD-Q8_K_XL
+          name: Qwen3.8 medium
+          contextWindow: 262144
+          input:
+            - text
+            - image
+          reasoningEfforts:
+            off:
+            low: low
+            medium: medium
+            high: high
+            xhigh: xhigh
+agent-default-model:
+  provider: local
+  model: Qwen3.8-27B-UD-Q8_K_XL
+ui-theme:
+  preference: light

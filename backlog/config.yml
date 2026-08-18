@@ -1,4 +1,4 @@
-project_name: "dsh_plugins"
+project_name: "dsh_config"
 default_status: "To Do"
 statuses: ["To Do", "In Progress", "Done"]
 labels: []
@@ -16,3 +16,4 @@ bypass_git_hooks: true
 check_active_branches: false
 active_branch_days: 30
 task_prefix: "task"
+

@@ -1,0 +1,52 @@
+# Your patch layer for this dsh profile, applied after every bundle layer:
+# a top-level YAML array of loader patch entries (id-targeted config
+# overrides, disables, and insert lists; `!!js` expressions allowed).
+
+- id: hmr
+  disabled: true
+
+- insert:
+    # Core execution capability required by dsh-tools; every bundle mounts
+    # it explicitly (dsh-base leaves it out — see dsh-headless, dsh-web-app).
+    - id: code-runtime
+      name: '@deepseek-ai/dsh-code-runtime-worker-thread'
+
+    - id: repl-runner
+      name: 'dsh-repl-runner'
+
+    # MCP servers — mirrors ../../.mcp.json. Each instance connects to one
+    # server and registers its tools globally on ctx.tools as
+    # mcp__<serverName>__<rawName> (see @deepseek-ai/dsh-mcp-client's README).
+    - id: mcp-backlog
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: backlog
+        transport: stdio
+        command: backlog
+        args: ['mcp', 'start']
+
+    - id: mcp-context7
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: context7
+        transport: stdio
+        command: npx
+        args: ['-y', '@upstash/context7-mcp']
+
+    - id: mcp-serena
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: serena
+        transport: stdio
+        command: uvx
+        args:
+          [
+            '--from',
+            'git+https://github.com/oraios/serena',
+            'serena',
+            'start-mcp-server',
+            '--context',
+            'ide',
+            '--project-from-cwd',
+          ]
+
