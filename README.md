@@ -74,20 +74,40 @@ ln -s "$DSH_HOME/profiles/node_modules" plugins/dsh-repl-runner/node_modules
 
 ## Running a profile
 
-The `dsh` alias in `~/git/bashrc/.bash_aliases` (`cd ~/git/dsh_config && command dsh "$@"`) covers
-the `repl` profile by default:
+The `dsh-repl` function in `~/git/bashrc/.bash_aliases` (`cd ~/git/dsh_config && command dsh "$@"`)
+covers the `repl` profile by default — named `dsh-repl` rather than `dsh` so it doesn't shadow the
+real `dsh` binary on PATH:
 
 ```bash
-dsh
+dsh-repl
 ```
 
-The `web` profile isn't wired into that alias's default and must be started manually, with its
-local API key exported first:
+The `web` and `acp` profiles aren't wired into that function's default and must be started
+manually, with the local API key exported first:
 
 ```bash
 export LOCAL_API_KEY=lemonade
-dsh web
+cd ~/git/dsh_config && dsh web
 ```
+
+`acp` bundles [`@openma/deepseek-harness-acp`](https://github.com/openma-ai/deepseek-harness-acp)
+so an ACP client (`dsh-tui`, Zed) can drive this composition instead of DeepSeek-official cloud.
+Its `cordis.patch.yml` pins `id: acp-plugin`'s `config.provider` to `local` — that id (not
+`acp-bridge`, the stdio transport, which has no `provider` field) is what
+`defaultProvider()`/`requireCredential()` actually read, so this is the override that has to land
+on `acp-plugin` or every `session/new` falls back to `deepseek-official` and hits `auth_required`:
+
+```bash
+export LOCAL_API_KEY=lemonade
+cd ~/git/dsh_config && dsh-tui --agent dsh --agent-arg --profile --agent-arg acp
+```
+
+### English agent-preset names
+
+The `acp` profile's "Agent" config picker shipped `standard`/`minimal` with Chinese `name`s.
+`agent-presets/{standard,minimal}/` holds English-named shadow copies, wired in by
+`profiles/acp/cordis.patch.yml`. See `docs/agent-presets-shadow.md` for the two non-obvious
+findings that made the shadow approach actually work.
 
 ## Profiles & MCP
 

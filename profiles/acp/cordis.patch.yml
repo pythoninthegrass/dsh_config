@@ -1,0 +1,79 @@
+# Patch layer for this dsh profile: id-targeted config overrides, disables,
+# and insert lists (`!!js` expressions allowed), applied after every bundle layer.
+
+- insert:
+    # Shadows the shipped standard/minimal presets with English copies so the
+    # picker doesn't show their Chinese names. See docs/agent-presets-shadow.md.
+    - id: agent-presets-shadow
+      name: '@deepseek-ai/dsh-agent-presets'
+      config:
+        default: standard
+        roots:
+          - path: ~/git/dsh_config/agent-presets
+            trust: user
+          - path: ~/.dsh/profiles/node_modules/@deepseek-ai/dsh/config/agent-presets
+            trust: system
+
+    # MCP servers — mirrors ../../.mcp.json. See README "Profiles & MCP".
+    - id: mcp-backlog
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: backlog
+        transport: stdio
+        command: backlog
+        args: ['mcp', 'start']
+
+    # bash -c wrapping redirects stderr — see README "Profiles & MCP".
+    - id: mcp-context7
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: context7
+        transport: stdio
+        command: bash
+        args:
+          [
+            '-c',
+            'mkdir -p "$HOME/.dsh/logs" && exec npx -y @upstash/context7-mcp 2>>"$HOME/.dsh/logs/mcp-context7.log"',
+          ]
+
+    - id: mcp-serena
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: serena
+        transport: stdio
+        command: bash
+        args:
+          [
+            '-c',
+            'mkdir -p "$HOME/.dsh/logs" && exec uvx --from git+https://github.com/oraios/serena serena start-mcp-server --context ide --project-from-cwd 2>>"$HOME/.dsh/logs/mcp-serena.log"',
+          ]
+
+    - id: mcp-tinyfish
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: tinyfish
+        transport: streamable-http
+        url: https://agent.tinyfish.ai/mcp
+        headers:
+          X-API-Key: !!js process.env.TINYFISH_API_KEY
+
+# Pins the credential gate to local (lemonade) — see README "Running a profile".
+# inject restates acp-plugin's full original list plus agentPresets; see
+# docs/agent-presets-shadow.md (inject replaces wholesale, it doesn't merge).
+- id: acp-plugin
+  inject:
+    - agents
+    - credentials
+    - llm
+    - agentDefaultModel
+    - sessionPersistence
+    - approval
+    - permissionPresets
+    - commands
+    - skills
+    - subagents
+    - userQuestions
+    - loader
+    - agentPresets
+  config:
+    provider: local

@@ -1,0 +1,15 @@
+{
+  "name": "dsh-profile-acp",
+  "private": true,
+  "dependencies": {
+    "@openma/deepseek-harness-acp": "^0.4.10"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "@openma/deepseek-harness-acp"
+      ]
+    }
+  }
+}
