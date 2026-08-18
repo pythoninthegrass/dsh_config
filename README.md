@@ -142,6 +142,9 @@ Caveats:
 - **web profile exposure**: `dsh web` is loopback-only by design (no auth in front of tool
   execution — see `linux_setup/docs/deepseek-harness.md`); MCP tools run there too, so keep it
   loopback.
+- **stderr spam**: `context7`/`serena` are wrapped in `bash -c '... 2>>log'` because
+  `StdioClientTransport` defaults child stderr to `inherit` and `dsh-mcp-client`'s config schema
+  has no field to override it; logs land in `~/.dsh/logs/` instead.
 
 ## Testing
 

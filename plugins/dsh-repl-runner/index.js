@@ -15,23 +15,8 @@ import { computeCompletions } from "./completion.js";
 import { resolveDshHome, historyFilePath, transcriptFilePath } from "./paths.js";
 
 /**
- * dsh-repl-runner — an interactive, multi-turn direct Agent driver.
- *
- * Same primitives as @deepseek-ai/dsh-headless (one Agent created through the
- * core registry, driven with followup/whenIdle), but the Agent/Session stay
- * alive across turns, driven by node:repl instead of a bare readline loop.
- *
- * Built on node:repl rather than hand-rolled readline because most of the
- * interactive-shell ergonomics this plugin needs come free from it, verified
- * against this project's own Node runtime rather than assumed from docs:
- *   - persistent cross-process history: repl.setupHistory()
- *   - visible multi-line continuation: throwing repl.Recoverable from eval()
- *   - dot-commands (.exit/.help/.save/.load/.editor): built into REPLServer
- * What ISN'T free, and stays hand-rolled below: tab completion (repl's
- * default completer is JS-global-aware, useless for chat text), the "/"
- * magic-command system, "!" shell-escape + Esc-to-cancel, and turn
- * serialization — REPLServer does NOT wait for one eval() to finish before
- * starting the next on burst/piped input, confirmed by probing it directly.
+ * dsh-repl-runner — an interactive, multi-turn direct Agent driver built on
+ * node:repl. See docs/dsh-repl-runner-internals.md for why.
  */
 
 const name = "repl-runner";
@@ -54,10 +39,7 @@ async function runRepl(ctx, io) {
 	const dshHome = resolveDshHome();
 	const useColor = Boolean(io.stdout.isTTY) && !process.env.NO_COLOR;
 	const colorize = (code, text) => (useColor ? `\x1b[${code}m${text}\x1b[0m` : text);
-	// 24-bit truecolor, not an indexed SGR code: codes 30-37/90-97 are exactly
-	// what a terminal color theme (e.g. Adventure Time) remaps, so no indexed
-	// "brighter magenta" can guarantee fuchsia - this bypasses the theme's
-	// palette entirely.
+	// Truecolor, not indexed — see docs/dsh-repl-runner-internals.md.
 	const FUCHSIA = "38;2;255;0;255";
 
 	async function createAgent() {
@@ -95,18 +77,10 @@ async function runRepl(ctx, io) {
 		return `${lines.join("\n")}\n`;
 	}
 
-	// Live turn feedback: whenIdle() gives no signal until the whole turn
-	// (all steps, all tool calls) settles, which reads as a hang on anything
-	// slower than a trivial reply. Stream text-delta chunks as the model
-	// produces them instead of waiting for the final assistant/message, and
-	// surface a one-line marker on the first reasoning-delta so a
-	// thinking-heavy turn isn't silent either.
+	// Streams text-delta chunks live — see docs/dsh-repl-runner-internals.md.
 	let streamed = false;
 	let thinking = false;
-	// Tracks whether the live prompt bracket is currently drawn fuchsia
-	// (shell-escape mode) so the keypress listener below only repaints it
-	// on an actual transition, and so a fresh prompt after a turn starts
-	// back at the normal cyan state regardless of the previous line.
+	// Whether the live prompt bracket is drawn fuchsia (shell-escape mode).
 	let shellPromptActive = false;
 	ctx.on("session/event", (session, event) => {
 		if (session !== agent.session || event.type !== "assistant/chunk") return;
@@ -122,10 +96,8 @@ async function runRepl(ctx, io) {
 		}
 	});
 
-	// All real work (agent turns, magic commands, shell escapes) funnels
-	// through this queue. REPLServer does not wait for one eval() call to
-	// finish before starting the next on burst/piped input, so eval() itself
-	// can't be trusted to serialize turns - only this chained promise can.
+	// Serializes turns — REPLServer doesn't wait for eval() to finish before
+	// starting the next on burst input. See docs/dsh-repl-runner-internals.md.
 	let queue = Promise.resolve();
 	function enqueue(fn) {
 		queue = queue.then(fn).catch((error) => {
@@ -266,11 +238,8 @@ async function runRepl(ctx, io) {
 		if (error) io.stderr.write(`dsh: couldn't load persistent history: ${error.message}\n`);
 	});
 
-	// Repaints the "[n]>" prompt (bracket + chevron) and, in shell mode, the
-	// leading "!" too - always the same visible width before and after, so
-	// the terminal's and readline's own cursor-column bookkeeping (used for
-	// arrow keys, backspace, wrapped-line redraws) never desyncs. Cursor
-	// save/restore (\x1b[s / \x1b[u) makes this safe to call mid-line.
+	// Redraws the "[n]>" prompt at a fixed width so cursor bookkeeping never
+	// desyncs. See docs/dsh-repl-runner-internals.md.
 	function repaintPrompt(color, includeBang) {
 		if (!useColor) return;
 		const bang = includeBang ? colorize(color, "!") : "";
@@ -283,9 +252,7 @@ async function runRepl(ctx, io) {
 	}
 
 	if (io.stdin.isTTY) {
-		// Snapshot of r.line from just before the current keystroke was
-		// applied, so a keystroke that strips the leading "!" (any edit but
-		// Esc) can be told apart from Enter clearing the line to submit it.
+		// Pre-keystroke snapshot of r.line — see docs/dsh-repl-runner-internals.md.
 		let previousLine = "";
 
 		io.stdin.on("keypress", (_str, key) => {
@@ -309,11 +276,7 @@ async function runRepl(ctx, io) {
 				return;
 			}
 
-			// The "! " prefix (bang + separating space) is protected as one
-			// unit from every edit except Esc: if this keystroke stripped
-			// either character (backspace, Ctrl+U, Ctrl+W landing right
-			// after the space, Ctrl+D at column 0, etc.), put the line back
-			// exactly as it was.
+			// The "! " prefix is protected from every edit but Esc — see docs/dsh-repl-runner-internals.md.
 			if (priorLine.startsWith("! ") && !r.line.startsWith("! ")) {
 				try {
 					clearLine();
@@ -330,12 +293,7 @@ async function runRepl(ctx, io) {
 			// the shell command always starts clear of the bang.
 			if (priorLine === "" && r.line === "!") r.write(" ");
 
-			// Repainted on every keystroke, not just the mode transition:
-			// readline's own line editing (backspace, Ctrl+U/E, wrapped-line
-			// reflow, our own clearLine() above) does a full internal
-			// _refreshLine() that redraws the prompt from its stored (always
-			// cyan) template, silently wiping this overlay. Re-asserting it
-			// every time is the only way it survives edits within the line.
+			// Repainted every keystroke, not just on transition — see docs/dsh-repl-runner-internals.md.
 			const isShellLine = r.line.startsWith("!");
 			shellPromptActive = isShellLine;
 			repaintPrompt(isShellLine ? FUCHSIA : "36", isShellLine);

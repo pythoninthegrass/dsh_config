@@ -1,22 +1,18 @@
-# Your patch layer for this dsh profile, applied after every bundle layer:
-# a top-level YAML array of loader patch entries (id-targeted config
-# overrides, disables, and insert lists; `!!js` expressions allowed).
+# Patch layer for this dsh profile: id-targeted config overrides, disables,
+# and insert lists (`!!js` expressions allowed), applied after every bundle layer.
 
 - id: hmr
   disabled: true
 
 - insert:
-    # Core execution capability required by dsh-tools; every bundle mounts
-    # it explicitly (dsh-base leaves it out — see dsh-headless, dsh-web-app).
+    # Required by dsh-tools; dsh-base leaves it out (unlike dsh-headless/dsh-web-app).
     - id: code-runtime
       name: '@deepseek-ai/dsh-code-runtime-worker-thread'
 
     - id: repl-runner
       name: 'dsh-repl-runner'
 
-    # MCP servers — mirrors ../../.mcp.json. Each instance connects to one
-    # server and registers its tools globally on ctx.tools as
-    # mcp__<serverName>__<rawName> (see @deepseek-ai/dsh-mcp-client's README).
+    # MCP servers — mirrors ../../.mcp.json. See README "Profiles & MCP".
     - id: mcp-backlog
       name: '@deepseek-ai/dsh-mcp-client'
       config:
@@ -25,12 +21,7 @@
         command: backlog
         args: ['mcp', 'start']
 
-    # context7 and serena are wrapped in `bash -c '... 2>>log'` because the MCP
-    # SDK's StdioClientTransport defaults child stderr to `inherit` and
-    # dsh-mcp-client's config schema has no field to override it — this is
-    # the only way to stop their startup/shutdown INFO logs from spamming the
-    # REPL without patching node_modules. Logs land in ~/.dsh/logs/ for
-    # debugging instead of being discarded outright.
+    # bash -c wrapping redirects stderr — see README "Profiles & MCP".
     - id: mcp-context7
       name: '@deepseek-ai/dsh-mcp-client'
       config:
