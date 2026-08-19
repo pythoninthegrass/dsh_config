@@ -1,3 +1,23 @@
+# AGENTS.md
+
+## dsh Quick Reference
+
+Full setup, gotchas, and the session-log parsing script live in the sibling `linux_setup` repo:
+[`../linux_setup/docs/deepseek-harness.md`](../linux_setup/docs/deepseek-harness.md). This section
+is a terse in-repo pointer for agents working in `dsh_config` — keep both files in sync when either
+changes.
+
+| Task | Command |
+|---|---|
+| Interactive TUI (ACP, default `dsh` alias) | `dsh` |
+| Lightweight multi-turn REPL | `dsh-repl` |
+| Web UI (loopback only, tunnel from elsewhere) | `export LOCAL_API_KEY=lemonade && cd ~/git/dsh_config && dsh web` — `ssh -L 3080:127.0.0.1:3080 mf` |
+| Parse a session log | `~/git/linux_setup/scripts/read_dsh_log.py <session.jsonl.zstd> {types,calls,joined,assistant,user,search,raw}` |
+| Session log path | `~/.dsh/sessions/<project-dir>/<id>/session.jsonl.zstd` — see linux_setup doc's "Session logs" section for the `<project-dir>`/`<id>` encoding rules |
+| Reinstall dsh / bump version | `~/.local/bin/mise exec -- npm install -g @deepseek-ai/dsh && ~/.local/bin/mise reshim` |
+
+See also this repo's `README.md` (plugin/profile/MCP wiring, `dsh-repl-runner` internals) and
+`docs/agent-presets-shadow.md` (English agent-preset shadow copies).
 
 <!-- BACKLOG.MD GUIDELINES START -->
 <!-- backlog.md-instructions-version: 1.48.0 -->
