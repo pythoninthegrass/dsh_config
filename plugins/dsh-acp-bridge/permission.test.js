@@ -19,6 +19,28 @@ test("falls back to the tool name as the toolCallId when the approval request ha
 	assert.equal(request.toolCall.toolCallId, "bash");
 });
 
+test("a diff-card view attaches kind and diff content to the embedded toolCall", () => {
+	const view = { card: "diff", diffs: [{ path: "/repo/a.txt", oldText: "old", newText: "new" }] };
+	const request = toPermissionRequest("session-1", { toolName: "str_replace_editor", callId: "call-1" }, view);
+	assert.deepEqual(request.toolCall, {
+		toolCallId: "call-1",
+		title: "str_replace_editor",
+		status: "pending",
+		kind: "edit",
+		content: [{ type: "diff", path: "/repo/a.txt", oldText: "old", newText: "new" }],
+	});
+});
+
+test("no view leaves the toolCall exactly as before, with no kind or content keys", () => {
+	const request = toPermissionRequest("session-1", { toolName: "bash", callId: "call-1" });
+	assert.deepEqual(request.toolCall, { toolCallId: "call-1", title: "bash", status: "pending" });
+});
+
+test("a non-diff view (e.g. a terminal card) sets kind but adds no content", () => {
+	const request = toPermissionRequest("session-1", { toolName: "bash", callId: "call-1" }, { card: "terminal" });
+	assert.deepEqual(request.toolCall, { toolCallId: "call-1", title: "bash", status: "pending", kind: "execute" });
+});
+
 test("a selected allow_once outcome maps to allowed-once", () => {
 	assert.equal(outcomeToApproval({ outcome: "selected", optionId: "allow_once" }), "allowed-once");
 });

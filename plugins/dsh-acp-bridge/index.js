@@ -14,6 +14,7 @@ import { toSessionInfo } from "./session-info.js";
 import { toSessionModeState } from "./session-modes.js";
 import { toSessionUpdate } from "./session-updates.js";
 import { stopReasonFor } from "./stop-reason.js";
+import { backscanToolCall, resolveCallView } from "./tool-view.js";
 
 /**
  * dsh-acp-bridge — implements the agent side of the official Agent Client
@@ -22,7 +23,7 @@ import { stopReasonFor } from "./stop-reason.js";
  */
 
 const name = "dsh-acp-bridge";
-const inject = ["agentDefaultModel", "agentPresets", "agents", "approval", "commands", "sessionPersistence", "sessions"];
+const inject = ["agentDefaultModel", "agentPresets", "agents", "approval", "commands", "sessionPersistence", "sessions", "tools"];
 const Config = z.object({
 	// Pins the credential gate so session creation doesn't fall back to
 	// deepseek-official and hit auth_required — see profiles/tui/cordis.patch.yml.
@@ -44,6 +45,7 @@ async function runBridge(ctx, io) {
 	const defaultModel = ctx.get("agentDefaultModel");
 	const sessionPersistence = ctx.get("sessionPersistence");
 	const sessions = ctx.get("sessions");
+	const tools = ctx.get("tools");
 	if (
 		agents === void 0 ||
 		agentPresets === void 0 ||
@@ -51,7 +53,8 @@ async function runBridge(ctx, io) {
 		commands === void 0 ||
 		defaultModel === void 0 ||
 		sessionPersistence === void 0 ||
-		sessions === void 0
+		sessions === void 0 ||
+		tools === void 0
 	)
 		return;
 
@@ -122,7 +125,8 @@ async function runBridge(ctx, io) {
 			bridgeSessions.set(agent.session.id, { agent, dispose, presetId, cwd: cwd ?? context.params.cwd });
 
 			for (const event of agent.session.events) {
-				const update = toSessionUpdate(event);
+				const view = event.type === "tool/call" ? resolveCallView(tools, agent, event.data.name, event.data.arguments) : void 0;
+				const update = toSessionUpdate(event, view);
 				if (update !== null) await context.client.notify("session/update", { sessionId: agent.session.id, update });
 			}
 
@@ -180,14 +184,18 @@ async function runBridge(ctx, io) {
 		}
 		if (sessionId === void 0) return next();
 
-		const request = toPermissionRequest(sessionId, req);
+		const call = req.callId === void 0 ? void 0 : backscanToolCall(req.agent.session.events, req.callId);
+		const view = call === void 0 ? void 0 : resolveCallView(tools, req.agent, call.name, call.arguments);
+		const request = toPermissionRequest(sessionId, req, view);
 		const response = await connection.client.request(acp.methods.client.session.requestPermission, request);
 		return outcomeToApproval(response.outcome);
 	});
 
 	ctx.on("session/event", (session, event) => {
-		if (!bridgeSessions.has(session.id)) return;
-		const update = toSessionUpdate(event);
+		const entry = bridgeSessions.get(session.id);
+		if (entry === void 0) return;
+		const view = event.type === "tool/call" ? resolveCallView(tools, entry.agent, event.data.name, event.data.arguments) : void 0;
+		const update = toSessionUpdate(event, view);
 		if (update !== null) connection.client.notify("session/update", { sessionId: session.id, update });
 	});
 

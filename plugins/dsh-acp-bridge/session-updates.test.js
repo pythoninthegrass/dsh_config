@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { toSessionUpdate } from "./session-updates.js";
+import { toSessionUpdate, kindFromView, diffContent } from "./session-updates.js";
 
 test("text-delta chunk becomes an agent_message_chunk update", () => {
 	const event = { type: "assistant/chunk", data: { chunk: { type: "text-delta", text: "hi" } } };
@@ -28,6 +28,48 @@ test("tool/call becomes an in-progress tool_call update", () => {
 		status: "in_progress",
 		rawInput: { command: "pwd" },
 	});
+});
+
+test("tool/call with a diff-card view carries kind edit and diff content", () => {
+	const event = { type: "tool/call", data: { callId: "call-1", name: "str_replace_editor", arguments: { command: "str_replace", path: "/repo/a.txt" } } };
+	const view = { card: "diff", title: "str_replace /repo/a.txt", diffs: [{ path: "/repo/a.txt", oldText: "old", newText: "new" }] };
+	assert.deepEqual(toSessionUpdate(event, view), {
+		sessionUpdate: "tool_call",
+		toolCallId: "call-1",
+		title: "str_replace_editor",
+		kind: "edit",
+		status: "in_progress",
+		rawInput: { command: "str_replace", path: "/repo/a.txt" },
+		content: [{ type: "diff", path: "/repo/a.txt", oldText: "old", newText: "new" }],
+	});
+});
+
+test("tool/call with a diff-card view whose oldText is null (a new file) passes oldText through as null", () => {
+	const view = { card: "diff", diffs: [{ path: "/repo/new.txt", oldText: null, newText: "hi" }] };
+	assert.deepEqual(diffContent(view), [{ type: "diff", path: "/repo/new.txt", oldText: null, newText: "hi" }]);
+});
+
+test("tool/call with no view keeps kind other and adds no content key", () => {
+	const event = { type: "tool/call", data: { callId: "call-1", name: "bash", arguments: { command: "pwd" } } };
+	const update = toSessionUpdate(event);
+	assert.equal(update.kind, "other");
+	assert.equal("content" in update, false);
+});
+
+test("kindFromView maps every shipped presenter card", () => {
+	assert.equal(kindFromView({ card: "diff" }), "edit");
+	assert.equal(kindFromView({ card: "terminal" }), "execute");
+	assert.equal(kindFromView({ card: "read" }), "read");
+	assert.equal(kindFromView({ card: "search" }), "search");
+	assert.equal(kindFromView({ card: "generic", kind: "read" }), "read");
+	assert.equal(kindFromView({ card: "generic", kind: "search" }), "search");
+	assert.equal(kindFromView({ card: "generic", kind: "fetch" }), "fetch");
+	assert.equal(kindFromView({ card: "generic", kind: "execute" }), "execute");
+	assert.equal(kindFromView({ card: "generic", kind: "other" }), "other");
+	assert.equal(kindFromView({ card: "web", kind: "search" }), "search");
+	assert.equal(kindFromView({ card: "web", kind: "fetch" }), "fetch");
+	assert.equal(kindFromView(undefined), "other");
+	assert.equal(kindFromView({ card: "unrecognized-future-card" }), "other");
 });
 
 test("successful tool/result becomes a completed tool_call_update with text content", () => {

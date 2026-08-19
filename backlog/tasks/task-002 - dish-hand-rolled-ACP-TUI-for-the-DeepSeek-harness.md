@@ -1,10 +1,10 @@
 ---
 id: TASK-002
 title: 'dsh-acp-bridge: agent-side ACP implementation'
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-19 17:04'
-updated_date: '2026-08-19 17:40'
+updated_date: '2026-08-19 20:02'
 labels: []
 dependencies: []
 references:
@@ -26,6 +26,6 @@ Full original design/rationale for both halves: `/home/lance/.claude/plans/how-f
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 dsh --profile tui exposes the bridge as an ACP agent answering initialize over real stdio, with profiles/acp/ left byte-for-byte untouched as a fallback (task-002.01)
-- [ ] #2 session/new, session/prompt, and streaming session/update (assistant/thought chunks, tool_call/tool_call_update) work end-to-end against a raw ACP client, verified independently of dish (task-002.02)
-- [ ] #3 session/request_permission, plan updates, session/load + session/list, preset/mode switching, and MCP tool passthrough are implemented and verified the same way (task-002.03)
+- [x] #2 session/new, session/prompt, and streaming session/update (assistant/thought chunks, tool_call/tool_call_update) work end-to-end against a raw ACP client, verified independently of dish (task-002.02)
+- [x] #3 session/request_permission, plan updates, session/load + session/list, preset/mode switching, and MCP tool passthrough are implemented and verified the same way (task-002.03)
 <!-- AC:END -->
