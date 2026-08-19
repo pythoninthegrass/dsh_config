@@ -1,0 +1,14 @@
+{
+  "name": "dsh-profile-tui",
+  "private": true,
+  "dependencies": {
+    "dsh-acp-bridge": "workspace:*"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base"
+      ]
+    }
+  }
+}

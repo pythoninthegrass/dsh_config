@@ -1,0 +1,6 @@
+packages:
+  - .
+  - plugins/*
+
+nodeLinker: hoisted
+autoInstallPeers: false
