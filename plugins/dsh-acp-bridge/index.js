@@ -5,20 +5,24 @@ import * as acp from "@agentclientprotocol/sdk";
 import { installModelSelection } from "@deepseek-ai/dsh-agent";
 import { createUserMessage } from "@deepseek-ai/dsh-llm";
 import { SessionId } from "@deepseek-ai/dsh-session";
+import { toAvailableCommands } from "./available-commands.js";
+import { commandResultUpdate } from "./command-result.js";
 import { buildInitializeResponse } from "./initialize.js";
+import { outcomeToApproval, toPermissionRequest } from "./permission.js";
 import { promptText } from "./prompt-text.js";
+import { toSessionInfo } from "./session-info.js";
+import { toSessionModeState } from "./session-modes.js";
 import { toSessionUpdate } from "./session-updates.js";
 import { stopReasonFor } from "./stop-reason.js";
 
 /**
  * dsh-acp-bridge — implements the agent side of the official Agent Client
  * Protocol (agentclientprotocol.com) over stdio, driving the dsh Agent
- * in-process. Permissions, plan updates, session load/list, presets, and MCP
- * passthrough land in task-002.03.
+ * in-process.
  */
 
 const name = "dsh-acp-bridge";
-const inject = ["agentDefaultModel", "agents", "sessions"];
+const inject = ["agentDefaultModel", "agentPresets", "agents", "approval", "commands", "sessionPersistence", "sessions"];
 const Config = z.object({
 	// Pins the credential gate so session creation doesn't fall back to
 	// deepseek-official and hit auth_required — see profiles/tui/cordis.patch.yml.
@@ -34,26 +38,64 @@ const internals = {
 async function runBridge(ctx, io) {
 	await ctx.get("loader")?.await();
 	const agents = ctx.get("agents");
+	const agentPresets = ctx.get("agentPresets");
+	const approval = ctx.get("approval");
+	const commands = ctx.get("commands");
 	const defaultModel = ctx.get("agentDefaultModel");
+	const sessionPersistence = ctx.get("sessionPersistence");
 	const sessions = ctx.get("sessions");
-	if (agents === void 0 || defaultModel === void 0 || sessions === void 0) return;
+	if (
+		agents === void 0 ||
+		agentPresets === void 0 ||
+		approval === void 0 ||
+		commands === void 0 ||
+		defaultModel === void 0 ||
+		sessionPersistence === void 0 ||
+		sessions === void 0
+	)
+		return;
 
 	// Keyed by dsh Session id, which we reuse directly as the ACP sessionId —
 	// one id space, no separate mapping to keep in sync.
 	const bridgeSessions = new Map();
 
-	async function createDshAgent(cwd) {
+	// Mounts a preset (default when `presetId` is undefined) onto a freshly
+	// created or resumed agent's scope. Shared by session/new, session/load,
+	// and session/set_mode's teardown-and-recreate.
+	function installAgent(agentCtx, selection, presetId) {
+		installModelSelection(agentCtx, { current: selection, assembled: void 0 });
+		return agentPresets.mount(agentCtx, presetId);
+	}
+
+	async function createDshAgent(sessionId, cwd, presetId) {
 		const selection = defaultModel.currentSelection();
-		const { agent } = await agents.create({
-			sessionId: SessionId(`session-${randomUUID()}`),
+		let mountedPreset;
+		const handle = await agents.create({
+			sessionId,
 			meta: { cwd },
 			agentOptions: { provider: selection.provider, model: selection.model },
-			setup: (agentCtx) => {
-				installModelSelection(agentCtx, { current: selection, assembled: void 0 });
+			setup: async (agentCtx) => {
+				mountedPreset = await installAgent(agentCtx, selection, presetId);
 			},
 		});
-		await agent.whenIdle();
-		return agent;
+		await handle.agent.whenIdle();
+		return { agent: handle.agent, dispose: handle.dispose, presetId: mountedPreset.id };
+	}
+
+	async function resumeDshAgent(resumeSessionId) {
+		const headers = await sessionPersistence.list();
+		const header = headers.find((candidate) => candidate.id === resumeSessionId);
+		const selection = defaultModel.currentSelection();
+		let mountedPreset;
+		const handle = await agents.resume({
+			resumeSessionId,
+			agentOptions: { provider: selection.provider, model: selection.model },
+			setup: async (agentCtx) => {
+				mountedPreset = await installAgent(agentCtx, selection, header?.agentPreset);
+			},
+		});
+		await handle.agent.whenIdle();
+		return { agent: handle.agent, dispose: handle.dispose, presetId: mountedPreset.id, cwd: header?.cwd };
 	}
 
 	// stdout carries only JSON-RPC frames past this point — never write
@@ -63,18 +105,60 @@ async function runBridge(ctx, io) {
 		.agent({ name: "dsh-acp-bridge" })
 		.onRequest("initialize", () => buildInitializeResponse())
 		.onRequest("session/new", async (context) => {
-			const agent = await createDshAgent(context.params.cwd);
-			bridgeSessions.set(agent.session.id, agent);
-			return { sessionId: agent.session.id };
+			const sessionId = SessionId(`session-${randomUUID()}`);
+			const { agent, dispose, presetId } = await createDshAgent(sessionId, context.params.cwd, void 0);
+			bridgeSessions.set(agent.session.id, { agent, dispose, presetId, cwd: context.params.cwd });
+
+			await context.client.notify("session/update", {
+				sessionId: agent.session.id,
+				update: { sessionUpdate: "available_commands_update", availableCommands: toAvailableCommands(commands.list(agent)) },
+			});
+
+			const presets = await agentPresets.list();
+			return { sessionId: agent.session.id, modes: toSessionModeState(presets, presetId) };
+		})
+		.onRequest("session/load", async (context) => {
+			const { agent, dispose, presetId, cwd } = await resumeDshAgent(context.params.sessionId);
+			bridgeSessions.set(agent.session.id, { agent, dispose, presetId, cwd: cwd ?? context.params.cwd });
+
+			for (const event of agent.session.events) {
+				const update = toSessionUpdate(event);
+				if (update !== null) await context.client.notify("session/update", { sessionId: agent.session.id, update });
+			}
+
+			const presets = await agentPresets.list();
+			return { modes: toSessionModeState(presets, presetId) };
+		})
+		.onRequest("session/list", async (context) => {
+			const headers = await sessionPersistence.list(context.signal);
+			const cwd = context.params.cwd ?? void 0;
+			const filtered = cwd === void 0 ? headers : headers.filter((header) => header.cwd === cwd);
+			return { sessions: filtered.map(toSessionInfo) };
+		})
+		.onRequest("session/set_mode", async (context) => {
+			const entry = bridgeSessions.get(context.params.sessionId);
+			if (entry === void 0) throw new Error(`dsh-acp-bridge: unknown session ${context.params.sessionId}`);
+
+			await entry.dispose();
+			const { agent, dispose, presetId } = await createDshAgent(context.params.sessionId, entry.cwd, context.params.modeId);
+			bridgeSessions.set(agent.session.id, { agent, dispose, presetId, cwd: entry.cwd });
+			return {};
 		})
 		.onRequest("session/prompt", async (context) => {
-			const agent = bridgeSessions.get(context.params.sessionId);
-			if (agent === void 0) throw new Error(`dsh-acp-bridge: unknown session ${context.params.sessionId}`);
+			const entry = bridgeSessions.get(context.params.sessionId);
+			if (entry === void 0) throw new Error(`dsh-acp-bridge: unknown session ${context.params.sessionId}`);
+			const { agent } = entry;
+
+			const text = promptText(context.params.prompt);
+			const execution = await commands.execute(agent, text, context.signal);
+			if (execution !== void 0) {
+				const update = commandResultUpdate(execution.result);
+				if (update !== null) await context.client.notify("session/update", { sessionId: agent.session.id, update });
+				return { stopReason: "end_turn" };
+			}
 
 			const firstSeq = agent.session.seq;
-			agent.followup(
-				createUserMessage({ content: [{ type: "text", text: promptText(context.params.prompt) }], source: { kind: "user" } }),
-			);
+			agent.followup(createUserMessage({ content: [{ type: "text", text }], source: { kind: "user" } }));
 			await agent.whenIdle();
 			await sessions.flush(agent.session);
 
@@ -85,6 +169,21 @@ async function runBridge(ctx, io) {
 			return { stopReason: stopReasonFor(reason) };
 		})
 		.connect(stream);
+
+	ctx.on("approval/request", async (req, next) => {
+		let sessionId;
+		for (const [id, entry] of bridgeSessions) {
+			if (entry.agent === req.agent) {
+				sessionId = id;
+				break;
+			}
+		}
+		if (sessionId === void 0) return next();
+
+		const request = toPermissionRequest(sessionId, req);
+		const response = await connection.client.request(acp.methods.client.session.requestPermission, request);
+		return outcomeToApproval(response.outcome);
+	});
 
 	ctx.on("session/event", (session, event) => {
 		if (!bridgeSessions.has(session.id)) return;

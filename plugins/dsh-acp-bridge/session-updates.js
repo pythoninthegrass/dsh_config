@@ -14,6 +14,8 @@ export function toSessionUpdate(event) {
 			return toolCallStartUpdate(event);
 		case "tool/result":
 			return toolCallResultUpdate(event);
+		case "todo/write":
+			return planUpdate(event);
 		default:
 			return null;
 	}
@@ -55,4 +57,11 @@ function toolCallResultUpdate(event) {
 
 function toolCallContent(blocks) {
 	return blocks.filter((block) => block.type === "text").map((block) => ({ type: "content", content: { type: "text", text: block.text } }));
+}
+
+function planUpdate(event) {
+	return {
+		sessionUpdate: "plan",
+		entries: event.data.todos.map((todo) => ({ content: todo.content, priority: "medium", status: todo.status })),
+	};
 }

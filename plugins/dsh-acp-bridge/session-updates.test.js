@@ -71,6 +71,32 @@ test("failed tool/result becomes a failed tool_call_update", () => {
 	});
 });
 
+test("todo/write becomes a plan update with mapped statuses and medium priority", () => {
+	const event = {
+		type: "todo/write",
+		data: {
+			todos: [
+				{ content: "Read the file", status: "completed" },
+				{ content: "Edit the file", status: "in_progress" },
+				{ content: "Run the tests", status: "pending" },
+			],
+		},
+	};
+	assert.deepEqual(toSessionUpdate(event), {
+		sessionUpdate: "plan",
+		entries: [
+			{ content: "Read the file", priority: "medium", status: "completed" },
+			{ content: "Edit the file", priority: "medium", status: "in_progress" },
+			{ content: "Run the tests", priority: "medium", status: "pending" },
+		],
+	});
+});
+
+test("todo/write with no todos becomes an empty plan", () => {
+	const event = { type: "todo/write", data: { todos: [] } };
+	assert.deepEqual(toSessionUpdate(event), { sessionUpdate: "plan", entries: [] });
+});
+
 test("unrelated event types produce no update", () => {
 	assert.equal(toSessionUpdate({ type: "turn/start", data: {} }), null);
 	assert.equal(toSessionUpdate({ type: "turn/end", data: { reason: { kind: "completed" } } }), null);
