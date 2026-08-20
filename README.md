@@ -8,7 +8,10 @@ this repo; nothing dsh reads lives only under `~/.dsh`.
 
 ## Layout
 
-- `plugins/{dsh-repl-runner,dsh-acp-bridge}/` — custom Cordis plugins (below).
+- `plugins/dsh-repl-runner/` — custom Cordis plugin (below). `dsh-acp-bridge`, the other
+  first-party plugin `tui` mounts, moved to `~/git/dish/dsh-acp-bridge/` (see below) — it's a
+  hand-rolled protocol implementation with its own test suite, not config, so it doesn't belong in
+  a config-repo pattern like this one.
 - `profiles/{repl,headless,web,acp,tui}/` — tracked profile configs (`cordis.yml`, `cordis.patch.yml`,
   `package.json`, `pnpm-workspace.yaml`), symlinked file-by-file into `~/.dsh/profiles/<name>/`.
 - `settings.yaml` — the durable `$DSH_HOME/settings.yaml` (provider/model wiring), symlinked to
@@ -36,21 +39,16 @@ single task). Built on the same primitives `dsh-headless` uses (`ctx.get("agents
 - `summarize-turn.js` — pure function that reduces a session's event log to the last assistant
   text + turn-end reason for one turn; covered by `summarize-turn.test.js` (`node --test`).
 
-### dsh-acp-bridge
+### dsh-acp-bridge (moved to `~/git/dish`)
 
 The agent side of the official [Agent Client Protocol](https://agentclientprotocol.com), hand-rolled
 on the first-party `@agentclientprotocol/sdk` — no dependency on `@openma/deepseek-harness-acp`
-(that adapter stays reference-only; see `profiles/acp/`). Mounted by `profiles/tui/`, meant to be
-driven by `dish` (Go/Bubble Tea), a separate `~/git/dish` repo not yet created (own
-language/toolchain — see backlog task-002 and its subtasks). Talks JSON-RPC over stdio via the SDK's fluent
-`acp.agent(...).onRequest(...).connect(acp.ndJsonStream(...))` API — the class-based
-`AgentSideConnection` is deprecated upstream.
-
-- `index.js` — the Cordis plugin. Currently answers `initialize` only;
-  `session/new`/`session/prompt`/streaming `session/update` land in task-002.02, the rest of the
-  ACP surface (permissions, plan, `session/load`/`list`, presets, MCP passthrough) in task-002.03.
-- `initialize.js` — pure function building the `initialize` response; covered by
-  `initialize.test.js` (`node --test`).
+(that adapter stays reference-only; see `profiles/acp/`). Mounted by `profiles/tui/`, driven by
+`dish` (Go/Bubble Tea, `~/git/dish`). Now lives at `~/git/dish/dsh-acp-bridge/` — see that repo's
+`dsh-acp-bridge/README.md` for plugin internals and the `node_modules` symlink setup. `tui`'s
+`plugins/dsh-acp-bridge` symlink points there; nothing else in this repo's profile wiring changed
+(`pnpm-workspace.yaml`, `package.json`'s `workspace:*` dependency, `cordis.patch.yml` are all
+unaffected by where the plugin's real files live).
 
 ## Using a plugin in a dsh profile
 
@@ -88,18 +86,9 @@ The symlink is host-specific and gitignored — recreate it after cloning onto a
 ln -s "$DSH_HOME/profiles/node_modules" plugins/dsh-repl-runner/node_modules
 ```
 
-`dsh-acp-bridge` needs the same fix but also has a *real* third-party dependency
-(`@agentclientprotocol/sdk`, plus its own `zod` peer) that isn't part of dsh's shared store, so a
-single whole-directory symlink won't do — it needs its own real `node_modules` for those, and only
-the `@deepseek-ai/*` scope symlinked in (so it resolves the exact same `dsh-agent`/`dsh-llm`/
-`dsh-session`/`schemastery` instances dsh's core uses, not a second copy):
-
-```bash
-cd plugins/dsh-acp-bridge
-pnpm install --config.auto-install-peers=false   # installs @agentclientprotocol/sdk + zod for real
-rm -rf node_modules/@deepseek-ai
-ln -s "$DSH_HOME/profiles/node_modules/@deepseek-ai" node_modules/@deepseek-ai
-```
+`dsh-acp-bridge` needs the same fix (also has a *real* third-party dependency,
+`@agentclientprotocol/sdk` plus its own `zod` peer, so a single whole-directory symlink won't do) —
+see `~/git/dish/dsh-acp-bridge/README.md` now that it lives there.
 
 ## Running a profile
 
@@ -140,11 +129,10 @@ findings that made the shadow approach actually work.
 
 ### tui
 
-`tui` bundles `dsh-acp-bridge` — the first-party, hand-rolled replacement for `acp`'s openma
-dependency, meant for `dish` (see backlog task-002) rather than a third-party ACP client. Its
-`cordis.patch.yml` pins `id: dsh-acp-bridge`'s `config.provider` to `local` the same
-way `acp` pins `acp-plugin`. Not wired into any alias yet (`dish` doesn't exist as a client yet);
-start it manually the same way as `acp`:
+`tui` bundles `dsh-acp-bridge` (now at `~/git/dish/dsh-acp-bridge/`) — the first-party, hand-rolled
+replacement for `acp`'s openma dependency, meant for `dish` rather than a third-party ACP client.
+Its `cordis.patch.yml` pins `id: dsh-acp-bridge`'s `config.provider` to `local` the same
+way `acp` pins `acp-plugin`. Not wired into any alias yet; start it manually the same way as `acp`:
 
 ```bash
 export LOCAL_API_KEY=lemonade
@@ -195,7 +183,4 @@ cd plugins/dsh-repl-runner
 ~/.local/bin/mise exec -- node --test
 ```
 
-```bash
-cd plugins/dsh-acp-bridge
-~/.local/bin/mise exec -- node --test
-```
+`dsh-acp-bridge`'s tests now live at `~/git/dish/dsh-acp-bridge/` — see that repo.

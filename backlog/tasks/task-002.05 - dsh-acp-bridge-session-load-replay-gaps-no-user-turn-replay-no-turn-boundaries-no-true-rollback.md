@@ -3,10 +3,10 @@ id: TASK-002.05
 title: >-
   dsh-acp-bridge: session/load replay gaps (no user-turn replay, no turn
   boundaries, no true rollback)
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-08-19 23:32'
-updated_date: '2026-08-19 23:32'
+updated_date: '2026-08-20 04:27'
 labels:
   - dsh-acp-bridge
   - session-replay
@@ -35,5 +35,5 @@ Cross-reference: dish repo (~/git/dish), task-001.06.
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Reported from live dish testing on 2026-08-19. Item 4 (self-resume-of-live-session error clarity) is a secondary observation bundled with the same investigation, not a core replay gap — worth a quick look at agents.resume()'s conflict/lock path in dsh core to see whether the existing intentional guard (see task-002.03's implementation notes: 'cannot prepare session ... while it is live') can surface through the RPC layer as that clear message instead of a generic Internal error, even though rejecting the resume itself is correct behavior.
+Moved to ~/git/dish as TASK-004 when dsh-acp-bridge relocated there for colocation with its ACP client counterpart (2026-08-20). Closing here to avoid duplicate tracking; see dish's backlog for the live version of this work.
 <!-- SECTION:NOTES:END -->
