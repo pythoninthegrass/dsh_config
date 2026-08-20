@@ -2,6 +2,12 @@
 # and insert lists (`!!js` expressions allowed), applied after every bundle layer.
 
 - insert:
+    # AD-009.34 follow-up (azure-dreams-remake) — denies fabricated
+    # tools/census/state_overlay.toml evidence before the write dispatches.
+    # See ~/git/dsh_config/plugins/dsh-honesty-gate/index.js.
+    - id: honesty-gate
+      name: 'dsh-honesty-gate'
+
     # MCP servers — mirrors ../../.mcp.json. See README "Profiles & MCP".
     - id: mcp-backlog
       name: '@deepseek-ai/dsh-mcp-client'

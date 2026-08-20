@@ -1,7 +1,9 @@
 {
   "name": "dsh-profile-headless",
   "private": true,
-  "dependencies": {},
+  "dependencies": {
+    "dsh-honesty-gate": "workspace:*"
+  },
   "dsh": {
     "profile": {
       "bundles": [
