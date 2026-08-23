@@ -12,7 +12,7 @@ changes.
 | Interactive TUI (ACP, default `dsh` alias) | `dsh` |
 | Lightweight multi-turn REPL | `dsh-repl` |
 | Web UI (loopback only, tunnel from elsewhere) | `export LOCAL_API_KEY=lemonade && cd ~/git/dsh_config && dsh web` — `ssh -L 3080:127.0.0.1:3080 mf` |
-| Parse a session log | `~/git/linux_setup/scripts/read_dsh_log.py <session.jsonl.zstd> {types,calls,joined,assistant,user,search,raw}` |
+| Parse a session log | `uvx --from "$HOME/git/burnkit[forensics]" burn-dsh-log <session.jsonl.zstd> {types,calls,joined,assistant,user,search,raw}` |
 | Session log path | `~/.dsh/sessions/<project-dir>/<id>/session.jsonl.zstd` — see linux_setup doc's "Session logs" section for the `<project-dir>`/`<id>` encoding rules |
 | Reinstall dsh / bump version | `~/.local/bin/mise exec -- npm install -g @deepseek-ai/dsh && ~/.local/bin/mise reshim` |
 
