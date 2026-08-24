@@ -6,22 +6,22 @@ llm-pi-ai:
       displayName: Local
       apiKeyEnv: LOCAL_API_KEY
       api: openai-completions
-      baseURL: http://127.0.0.1:13305/api/v1
+      baseURL: http://127.0.0.1:61519/v1
       models:
-        - id: Qwen3.8-27B-UD-Q8_K_XL
-          name: Qwen3.8 medium
+        - id: qwen3.8-27b-fp8
+          name: Qwen3.8-27B FP8 (vLLM)
           contextWindow: 262144
           input:
             - text
             - image
           reasoningEfforts:
-            off:
+            off: none
             low: low
             medium: medium
             high: high
             xhigh: xhigh
 agent-default-model:
   provider: local
-  model: Qwen3.8-27B-UD-Q8_K_XL
+  model: qwen3.8-27b-fp8
 ui-theme:
   preference: light
