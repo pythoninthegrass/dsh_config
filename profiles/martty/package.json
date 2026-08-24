@@ -1,0 +1,15 @@
+{
+  "name": "dsh-profile-martty",
+  "private": true,
+  "dependencies": {
+    "martty": "^0.2.23"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "@deepseek-ai/dsh-base",
+        "martty"
+      ]
+    }
+  }
+}

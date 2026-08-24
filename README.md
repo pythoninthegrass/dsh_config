@@ -12,8 +12,12 @@ this repo; nothing dsh reads lives only under `~/.dsh`.
   first-party plugin `tui` mounts, moved to `~/git/dish/dsh-acp-bridge/` (see below) — it's a
   hand-rolled protocol implementation with its own test suite, not config, so it doesn't belong in
   a config-repo pattern like this one.
-- `profiles/{repl,headless,web,acp,tui}/` — tracked profile configs (`cordis.yml`, `cordis.patch.yml`,
-  `package.json`, `pnpm-workspace.yaml`), symlinked file-by-file into `~/.dsh/profiles/<name>/`.
+- `profiles/{repl,headless,web,acp,tui,martty}/` — tracked profile configs (`cordis.yml`,
+  `cordis.patch.yml`, `package.json`, `pnpm-workspace.yaml`), symlinked file-by-file into
+  `~/.dsh/profiles/<name>/`. `martty` is a separate profile from `tui`, not a plugin layered onto
+  it — martty bundles its own ACP surface (`@openma/deepseek-harness-acp`) for its own Rust-painted
+  TUI client, and running it alongside `tui`'s hand-rolled `dsh-acp-bridge` would mount two ACP
+  surfaces for one TUI, which martty's own docs call unsupported.
 - `settings.yaml` — the durable `$DSH_HOME/settings.yaml` (provider/model wiring), symlinked to
   `~/.dsh/settings.yaml`. dsh also persists UI-only state into this file (theme, onboarding
   version) through the same symlink — expect small UI-only diffs; don't commit those.
