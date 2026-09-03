@@ -40,6 +40,12 @@ be a string`, naming whichever key it reached first. Keys must match
 `/^[A-Za-z_][A-Za-z0-9_]*$/`. Verified against dsh-credentials-local 0.1.0-rc.7,
 `lib/index.js:121-137`; re-check this on a dsh upgrade.
 
+That verification was done on `mf` only (Linux, dsh 0.1.0-rc.7 via mise node), by reading the
+installed module and booting `dsh --profile headless`. `mbp-nw`'s build was not checked. The
+schema is parser-version-specific and this is an rc, so if `mbp-nw` carries a different dsh
+version, confirm the shape there before assuming this section applies — it may need a
+per-version split rather than one rule.
+
 Each host's `.credentials.yaml` is real, host-specific content (gitignored, like `.env`) — `mf`
 carries `vllm` (a placeholder value; vLLM's `apiKeyEnv` is schema boilerplate it doesn't
 check), `mbp-nw` carries the real omlx key. `.credentials.yaml.example` is the tracked template.
