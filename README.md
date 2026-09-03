@@ -27,6 +27,11 @@ this repo; nothing dsh reads lives only under `~/.dsh`.
   `~/git/bashrc/.bash_aliases`. `TINYFISH_API_KEY` is the first one a server needs; still
   nothing is templated (`*.tpl` + `envsubst`) — add that if managing these by hand gets painful,
   matching `pi_config`'s pattern.
+- `.credentials.yaml` (gitignored) / `.credentials.yaml.example` — the durable
+  `$DSH_HOME/.credentials.yaml` (`dsh-credentials-local`'s managed store), symlinked to
+  `~/.dsh/.credentials.yaml`, same pattern as `settings.yaml`. Holds `apiKeyEnv` refs (e.g.
+  `LOCAL_API_KEY`) so they resolve regardless of the launching process's environment — see
+  `docs/credentials-store.md`.
 - `backlog/`, `AGENTS.md`, `.claude/` — this repo is itself a Backlog.md project, used as the MCP
   test target (see below).
 
