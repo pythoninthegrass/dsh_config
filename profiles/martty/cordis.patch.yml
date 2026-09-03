@@ -2,8 +2,8 @@
 # a top-level YAML array of loader patch entries (id-targeted config
 # overrides, disables, and insert lists; `!!js` expressions allowed).
 
-# Pins the credential gate to local (lemonade) — same gotcha documented for
-# profiles/acp in linux_setup/docs/deepseek-harness.md ("provider pinning
+# Pins the credential gate to local (backend varies by host — see settings.yaml) — same
+# gotcha documented for profiles/acp in linux_setup/docs/deepseek-harness.md ("provider pinning
 # targets acp-plugin, not acp-bridge"). martty's tui-acp-host
 # (node_modules/martty/lib/acp-host.js) mounts @openma/deepseek-harness-acp/plugin
 # directly via ctx.plugin(plugin, config) — config set on this id passes

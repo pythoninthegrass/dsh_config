@@ -33,11 +33,11 @@ directly has the same effect:
 version: 1
 
 refs:
-  LOCAL_API_KEY: lemonade
+  LOCAL_API_KEY: vllm
 ```
 
 Each host's `.credentials.yaml` is real, host-specific content (gitignored, like `.env`) — `mf`
-carries `lemonade` (a placeholder value; vLLM's `apiKeyEnv` is schema boilerplate it doesn't
+carries `vllm` (a placeholder value; vLLM's `apiKeyEnv` is schema boilerplate it doesn't
 check), `mbp-nw` carries the real omlx key. `.credentials.yaml.example` is the tracked template.
 
 Permissions matter: `dsh-credentials-local` refuses to parse the document at boot or on reload

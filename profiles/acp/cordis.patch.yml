@@ -57,7 +57,8 @@
         headers:
           X-API-Key: !!js process.env.TINYFISH_API_KEY
 
-# Pins the credential gate to local (lemonade) — see README "Running a profile".
+# Pins the credential gate to local (backend varies by host — see settings.yaml) — see README
+# "Running a profile".
 # inject restates acp-plugin's full original list plus agentPresets; see
 # docs/agent-presets-shadow.md (inject replaces wholesale, it doesn't merge).
 - id: acp-plugin

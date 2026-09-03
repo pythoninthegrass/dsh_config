@@ -113,7 +113,7 @@ The `web` and `acp` profiles aren't wired into that function's default and must 
 manually, with the local API key exported first:
 
 ```bash
-export LOCAL_API_KEY=lemonade
+export LOCAL_API_KEY=vllm
 cd ~/git/dsh_config && dsh web
 ```
 
@@ -125,7 +125,7 @@ Its `cordis.patch.yml` pins `id: acp-plugin`'s `config.provider` to `local` — 
 on `acp-plugin` or every `session/new` falls back to `deepseek-official` and hits `auth_required`:
 
 ```bash
-export LOCAL_API_KEY=lemonade
+export LOCAL_API_KEY=vllm
 cd ~/git/dsh_config && dsh-tui --agent dsh --agent-arg --profile --agent-arg acp
 ```
 
@@ -144,7 +144,7 @@ Its `cordis.patch.yml` pins `id: dsh-acp-bridge`'s `config.provider` to `local` 
 way `acp` pins `acp-plugin`. Not wired into any alias yet; start it manually the same way as `acp`:
 
 ```bash
-export LOCAL_API_KEY=lemonade
+export LOCAL_API_KEY=vllm
 cd ~/git/dsh_config && dsh --profile tui
 ```
 
