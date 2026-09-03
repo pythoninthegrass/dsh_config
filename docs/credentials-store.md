@@ -30,11 +30,15 @@ writes to when you fill in a key through its UI (`ctx.credentials.set`). Editing
 directly has the same effect:
 
 ```yaml
-version: 1
-
-refs:
-  LOCAL_API_KEY: vllm
+LOCAL_API_KEY: vllm
 ```
+
+The document is a flat mapping of ref to non-empty string — there is no `version` key and no
+`refs:` nesting. `parseCredentialsDocument` rejects a non-string value rather than skipping it, so
+a nested block fails the whole document and dsh aborts at boot with `the value for "<key>" ... must
+be a string`, naming whichever key it reached first. Keys must match
+`/^[A-Za-z_][A-Za-z0-9_]*$/`. Verified against dsh-credentials-local 0.1.0-rc.7,
+`lib/index.js:121-137`; re-check this on a dsh upgrade.
 
 Each host's `.credentials.yaml` is real, host-specific content (gitignored, like `.env`) — `mf`
 carries `vllm` (a placeholder value; vLLM's `apiKeyEnv` is schema boilerplate it doesn't
